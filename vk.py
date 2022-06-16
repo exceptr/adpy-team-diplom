@@ -5,34 +5,64 @@ from vk_api.longpoll import VkEventType
 from vk_api.tools import VkTools
 from vk_api.execute import VkFunction
 from random import randrange
+from tokens import GROUP_TOKEN, USER_TOKEN
 
 
 def run_bot():
-    token_group = "9408bb531621ecadc532e2756e8e7034130b7ace7f7551351bbeac71b0342226cd5c1e6dff04f7b543d14"
+    token_group = GROUP_TOKEN
     session_group = vk_api.VkApi(token=token_group)
     vk_group = session_group.get_api()
     vk_session = Client.give_session(session_group)
     keyboard = Keyboard(True, False,
                         [[Button.text("Да", "зеленый"), Button.text("Нет", "белый")],
+                         [Button.text("Поиск", "синий")],
                          [Button.url("Кнопка3url", "https://vk.com/")]])
-    waiting_url_users = set()
+    key_word = ['поиск', 'старт', '❤', '❤❤❤', 'стоп', 'да', 'нет', 'привет']
+    req_err = False
+    search_param = {}
     while True:
-        # if event.type == VkEventType.MESSAGE_NEW \
-        #         and event.user_id in waiting_url_users \
-        #         and event.text:
-        #     advert = event.text
-        #     waiting_url_users.remove(event.user_id)
         if vk_session.check_new_msg():
             event = vk_session.get_event()
             eventxt, userid = event.text, event.user_id
             if eventxt.lower() == 'привет':
                 vk_session.msg(f'Привет. Вас интересует поиск людей по критериям ?', userid)
-                vk_session.send_keyboard(keyboard, event.user_id, 'Ответ "Да" для продолжения\n'
-                                                                  'Ответ "Нет" для завершения')
-            elif eventxt.lower() == 'да':
-                vk_session.msg(f'Укажите возраст от', userid)
-            elif eventxt.lower() == 'поиск':
-                people_info = get_people_by_parameters(18, 25, 1, "Москва")
+                vk_session.send_keyboard(keyboard, event.user_id, 'Кнопка "Да" для продолжения\n'
+                                                                  'Кнопка "Нет" для завершения')
+            # Поиск пары по критериям
+            if eventxt.lower() == 'да':
+                vk_session.msg(f'Для поиска введите параметры, пример - девушка 18-39 город', userid)
+            if eventxt.lower() not in key_word and len(eventxt) > 1:
+                try:
+                    print(eventxt.lower())
+                    sex = 0
+                    search_param['sex'] = sex
+                    if eventxt[0:7].lower() == 'девушка':
+                        sex = 1
+                        search_param['sex'] = sex
+                    elif eventxt[0:7].lower() == 'мужчина':
+                        sex = 2
+                        search_param['sex'] = sex
+                    age_from = int(eventxt[8:10])
+                    age_to = int(eventxt[11:14])
+                    hometown = eventxt[14:len(eventxt)].lower()
+                    search_param['age_from'] = age_from
+                    search_param['age_to'] = age_to
+                    search_param['hometown'] = hometown
+                    search_param['id'] = userid
+                    vk_session.msg(f'Для поиска нажмите кнопку "Поиск"', userid)
+                except ValueError:
+                    # if len(search_param) < 5:
+                        vk_session.msg(f'Некорректно введены параметры, укажите параметры поиска в формате - '
+                                       f'девушка 18-39 город', userid)
+                    # elif len(search_param) == 5:
+
+                        print(search_param)
+                        print(len(search_param))
+            if eventxt.lower() == 'поиск':
+            #     print(search_param)
+                people_info = get_people_by_parameters(search_param['age_from'], search_param['age_to'],
+                                                       search_param['sex'], search_param['hometown'])
+            #     people_info = get_people_by_parameters(age_from, age_to, sex, hometown)
                 print(people_info)
                 if people_info is None:
                     vk_session.msg(f'Профиль удалён или заблокирован, перейдите к следующему варианту', userid)
@@ -57,7 +87,7 @@ def run_bot():
                 vk_session.msg('Хорошо, а у тебя?', userid)
 
 
-token_user = "a67f00c673c3d4b12800dd0ba29579ec56d804f3c5f3bbcef5328d4b3981fa5987b951cf2c8d8b24b9abd"
+token_user = USER_TOKEN
 session_user = vk_api.VkApi(token=token_user)
 vk_user = session_user.get_api()
 
@@ -106,7 +136,7 @@ def get_people_by_parameters(age_from=None, age_to=None, sex=None, hometown=str,
 
 
 counter_offset = {
-    'counter': 14
+    'counter': 1
 }
 
 
