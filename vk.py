@@ -1,9 +1,6 @@
 from pprint import pprint
 import vk_api
 from LiteVkApi import Client, Keyboard, Button
-from vk_api.longpoll import VkEventType
-from vk_api.tools import VkTools
-from vk_api.execute import VkFunction
 from random import randrange
 from tokens import GROUP_TOKEN, USER_TOKEN
 
@@ -16,10 +13,10 @@ def run_bot():
     keyboard = Keyboard(True, False,
                         [[Button.text("Да", "зеленый"), Button.text("Нет", "белый")],
                          [Button.text("Поиск", "синий")],
-                         [Button.url("Кнопка3url", "https://vk.com/")]])
-    key_word = ['поиск', 'старт', '❤', '❤❤❤', 'стоп', 'да', 'нет', 'привет']
-    req_err = False
+                         [Button.text("В избранное", "белый"), Button.text("Показать избранное", "белый")]])
+    key_word = ['поиск', 'старт', 'в избранное', 'показать избранное', 'стоп', 'да', 'нет', 'привет']
     search_param = {}
+    last_search_people_info = {}
     while True:
         if vk_session.check_new_msg():
             event = vk_session.get_event()
@@ -51,40 +48,37 @@ def run_bot():
                     search_param['id'] = userid
                     vk_session.msg(f'Для поиска нажмите кнопку "Поиск"', userid)
                 except ValueError:
-                    # if len(search_param) < 5:
                         vk_session.msg(f'Некорректно введены параметры, укажите параметры поиска в формате - '
                                        f'девушка 18-39 город', userid)
-                    # elif len(search_param) == 5:
-
-                        print(search_param)
-                        print(len(search_param))
             if eventxt.lower() == 'поиск':
-            #     print(search_param)
                 people_info = get_people_by_parameters(search_param['age_from'], search_param['age_to'],
                                                        search_param['sex'], search_param['hometown'])
-            #     people_info = get_people_by_parameters(age_from, age_to, sex, hometown)
-                print(people_info)
                 if people_info is None:
                     vk_session.msg(f'Профиль удалён или заблокирован, перейдите к следующему варианту', userid)
                 elif len(people_info) == 6:
                     first_name = people_info['first_name']
                     last_name = people_info['last_name']
                     link_people = people_info['link_people']
+                    last_search_people_info.update(first_name=first_name)
+                    last_search_people_info.update(last_name=last_name)
+                    last_search_people_info.update(link_people=link_people)
                     photos = people_info['photos']
-                # print(len(people_info))
                     vk_session.msg(f'{first_name} {last_name}\n{link_people}', userid)
-                    # photos = people_info['photos']
                     vk_group.messages.send(attachment=photos, user_id=userid, random_id=randrange(10 ** 7))
-                    # for event_txt in photos:
-                    #     # vk_session.msg(f'Привет, {userid}', userid)
-                    #     vk_group.messages.send(attachment=event_txt, user_id=userid, random_id=randrange(10 ** 7))
                 elif len(people_info) == 5:
                     first_name = people_info['first_name']
                     last_name = people_info['last_name']
                     link_people = people_info['link_people']
+                    last_search_people_info.update(first_name=first_name)
+                    last_search_people_info.update(last_name=last_name)
+                    last_search_people_info.update(link_people=link_people)
                     vk_session.msg(f'{first_name} {last_name}\n{link_people}\nЗакрытый профиль', userid)
-            elif eventxt == 'Как дела?':
-                vk_session.msg('Хорошо, а у тебя?', userid)
+            # Когда нажимаем кнопку в избранное, добавляем послнеднего кого искали в избранное
+            if eventxt.lower() == 'в избранное':
+                print(last_search_people_info)
+            # Здесь нужно вытащить из БД всех пользователей который добавили в избранное
+            if eventxt.lower() == 'показать избранное':
+                ...
 
 
 token_user = USER_TOKEN
@@ -100,8 +94,6 @@ def get_people_by_parameters(age_from=None, age_to=None, sex=None, hometown=str,
     pprint(response)
     people_info = {}
     for i in response['items']:
-        # pprint(i)
-        # print(i['is_closed'])
         if i['is_closed'] == bool(True):
             counter = increase_counter()
             response = vk_user.users.search(age_from=age_from, age_to=age_to, sex=sex, hometown=hometown, status=status,
@@ -143,14 +135,3 @@ counter_offset = {
 def increase_counter():
     counter_offset['counter'] += 1
     return counter_offset['counter']
-
-
-
-if __name__ == '__main__':
-    run_bot()
-    # get_people_by_parameters(18, 25, 1, "Москва")
-    # get_popular_photos()
-    # increase_counter()
-    # increase_counter()
-    # increase_counter()
-    # print(counter_offset)
