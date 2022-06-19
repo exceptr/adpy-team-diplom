@@ -3,6 +3,8 @@ import vk_api
 from LiteVkApi import Client, Keyboard, Button
 from random import randrange
 from tokens import GROUP_TOKEN, USER_TOKEN
+from IntegretionDB.query_to_vkinder_db import insert_data_favorite, select_favorite, insert_data_userid, \
+    select_query_vkuser, insert_data_VKUserFavorite, select_vkuser_id, select_favorite_id
 
 
 def run_bot():
@@ -17,10 +19,13 @@ def run_bot():
     key_word = ['поиск', 'старт', 'в избранное', 'показать избранное', 'стоп', 'да', 'нет', 'привет']
     search_param = {}
     last_search_people_info = {}
+
     while True:
         if vk_session.check_new_msg():
             event = vk_session.get_event()
             eventxt, userid = event.text, event.user_id
+            if userid not in select_query_vkuser():
+                insert_data_userid(userid)
             if eventxt.lower() == 'привет':
                 vk_session.msg(f'Привет. Вас интересует поиск людей по критериям ?', userid)
                 vk_session.send_keyboard(keyboard, event.user_id, 'Кнопка "Да" для продолжения\n'
@@ -28,6 +33,8 @@ def run_bot():
             # Поиск пары по критериям
             if eventxt.lower() == 'да':
                 vk_session.msg(f'Для поиска введите параметры, пример - девушка 18-39 город', userid)
+
+
             if eventxt.lower() not in key_word and len(eventxt) > 1:
                 try:
                     print(eventxt.lower())
@@ -48,8 +55,8 @@ def run_bot():
                     search_param['id'] = userid
                     vk_session.msg(f'Для поиска нажмите кнопку "Поиск"', userid)
                 except ValueError:
-                        vk_session.msg(f'Некорректно введены параметры, укажите параметры поиска в формате - '
-                                       f'девушка 18-39 город', userid)
+                    vk_session.msg(f'Некорректно введены параметры, укажите параметры поиска в формате - '
+                                   f'девушка 18-39 город', userid)
             if eventxt.lower() == 'поиск':
                 people_info = get_people_by_parameters(search_param['age_from'], search_param['age_to'],
                                                        search_param['sex'], search_param['hometown'])
@@ -76,9 +83,12 @@ def run_bot():
             # Когда нажимаем кнопку в избранное, добавляем послнеднего кого искали в избранное
             if eventxt.lower() == 'в избранное':
                 print(last_search_people_info)
+                insert_data_favorite(last_search_people_info['link_people'])
+                vk_session.msg(f'Пользователь добавлен в избранное.', userid)
+                insert_data_VKUserFavorite(select_vkuser_id(userid), select_favorite_id())
             # Здесь нужно вытащить из БД всех пользователей который добавили в избранное
             if eventxt.lower() == 'показать избранное':
-                ...
+                vk_session.msg(f'Избранное: \n {select_favorite(userid)}', userid)
 
 
 token_user = USER_TOKEN
@@ -91,20 +101,20 @@ def get_people_by_parameters(age_from=None, age_to=None, sex=None, hometown=str,
     counter = increase_counter()
     response = vk_user.users.search(age_from=age_from, age_to=age_to, sex=sex, hometown=hometown, status=status,
                                     has_photo=has_photo, offset=counter, count=count, fields=fields)
-    pprint(response)
     people_info = {}
     for i in response['items']:
         if i['is_closed'] == bool(True):
             counter = increase_counter()
             response = vk_user.users.search(age_from=age_from, age_to=age_to, sex=sex, hometown=hometown, status=status,
                                             has_photo=has_photo, offset=counter, count=count, fields=fields)
+            pprint(response)
             for i in response['items']:
                 people_info.update(id=i['id'])
                 people_info.update(first_name=i['first_name'])
                 people_info.update(last_name=i['last_name'])
                 people_info.update(link_people=f"https://vk.com/id{str(i['id'])}")
                 people_info.update(counter=counter)
-                pprint(people_info)
+                # pprint(people_info)
                 return people_info
 
         elif i['is_closed'] == bool(False):
@@ -123,7 +133,7 @@ def get_people_by_parameters(age_from=None, age_to=None, sex=None, hometown=str,
                 sorted_dict = sorted(photos_dict, key=photos_dict.__getitem__)
                 popular_photos = sorted_dict[-3:]
                 people_info.update(photos=popular_photos)
-            pprint(people_info)
+            # pprint(people_info)
             return people_info
 
 
