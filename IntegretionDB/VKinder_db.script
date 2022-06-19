@@ -1,0 +1,20 @@
+Vkinder_DB
+
+CREATE USER Developer with password 'qwerty123';
+
+CREATE DATABASE Vkinder_DB WITH OWNER Developer;
+
+CREATE TABLE VKUser(
+    id serial primary key,
+    vk_id integer not null
+);
+
+CREATE TABLE Favorite(
+    id serial primary key,
+    favorite_link text
+);
+
+CREATE TABLE VKUserFavorite(
+    id_user integer references VKUser(id),
+    id_favorite integer references Favorite(id)
+);
