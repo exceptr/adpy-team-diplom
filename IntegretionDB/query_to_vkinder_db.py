@@ -1,6 +1,5 @@
 from Connect import connection
 from psycopg2 import Error
-import os
 
 
 # регистрация пользователя в БД
